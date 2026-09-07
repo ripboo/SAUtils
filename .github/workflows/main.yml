@@ -14,22 +14,21 @@ jobs:
     steps:
 
     - name: Checkout repository...
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: recursive
-        
-    - name: Setup SSH keys...
-      uses: webfactory/ssh-agent@v0.8.0
-      with:
-        ssh-private-key: |
-          ${{ secrets.SSH }}
 
-    - name: Get GTA:SA structures file (private)...
+    - name: Download GTA:SA structures zip...
+      uses: wei/wget@v1
+      with:
+        args: -O ./structs.zip https://github.com/RusJJ/GTASAAndroid_Structs/archive/refs/heads/main.zip
+
+    - name: Extract and organize structures...
       run: |
-        git clone ssh://git@github.com/RusJJ/GTASAAndroid_Structs.git ./structs
+        unzip -q ./structs.zip
         mkdir -p ./jni
-        mv ./structs/* ./jni/
-        rm -rf ./structs
+        mv ./GTASAAndroid_Structs-main/* ./jni/
+        rm -rf ./structs.zip ./GTASAAndroid_Structs-main
 
     - name: Install Android NDK (r24)...
       uses: nttld/setup-ndk@v1.2.0
@@ -40,7 +39,6 @@ jobs:
     - name: Build the code...
       run: ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=./jni/Android.mk NDK_APPLICATION_MK=./jni/Application.mk NDK_DEBUG=0 -j5
 
-    
     - name: Upload the mod!
       uses: actions/upload-artifact@v4
       with:
