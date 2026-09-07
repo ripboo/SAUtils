@@ -1,10 +1,12 @@
 name: AML Mod Compiler
 
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      mod_name:
+        description: 'اسم المود الذي تريد بناءه'
+        required: true
+        default: 'MyCustomMod'
 
 jobs:
   build:
@@ -22,20 +24,12 @@ jobs:
         ssh-private-key: |
           ${{ secrets.SSH }}
 
-    - name: Download AndroidModLoader`s mod template...
-      uses: wei/wget@v1
-      with:
-        args: -O ./AML_src.zip https://github.com/RusJJ/AndroidModLoader/archive/refs/heads/main.zip
-
-    - name: Install AndroidModLoader`s mod template...
-      run: |
-        unzip ./AML_src.zip
-        mv ./AndroidModLoader-main/mod ./mod
-          
     - name: Get GTA:SA structures file (private)...
       run: |
         git clone ssh://git@github.com/RusJJ/GTASAAndroid_Structs.git ./structs
-        mv ./structs/* ./
+        mkdir -p ./jni
+        mv ./structs/* ./jni/
+        rm -rf ./structs
 
     - name: Install Android NDK (r24)...
       uses: nttld/setup-ndk@v1.2.0
@@ -44,10 +38,10 @@ jobs:
         local-cache: true
 
     - name: Build the code...
-      run: ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=./Android.mk NDK_APPLICATION_MK=./Application.mk NDK_DEBUG=0 -j5
+      run: ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=./jni/Android.mk NDK_APPLICATION_MK=./jni/Application.mk NDK_DEBUG=0 -j5
 
     - name: Upload the mod!
       uses: actions/upload-artifact@v3
       with:
-        name: compiled-mod.zip
+        name: compiled-mod-${{ github.event.inputs.mod_name }}
         path: ./libs
